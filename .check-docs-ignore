@@ -1,0 +1,5 @@
+# 本仓库是 skill 的源仓库，不是被 docs-hygiene 治理的项目。
+# skill 内容中提到的 docs/README.md / RELEASE_CHECKLIST.md 是对「采用方项目」
+# 目录布局的示例引用，不是本仓库的文件，在此豁免可达性校验。
+docs/README.md
+RELEASE_CHECKLIST.md
