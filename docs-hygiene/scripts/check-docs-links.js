@@ -90,10 +90,11 @@ function main() {
     'g'
   );
 
-  const files = [
+  // docs/ 位于仓库根内，walk(ROOT) 与 walk(docs) 会重复收集，按绝对路径去重
+  const files = [...new Set([
     ...walk(ROOT, (name) => name.endsWith('.md')),
     ...walk(path.join(ROOT, 'docs'), (name) => name.endsWith('.md')),
-  ];
+  ])];
   for (const dir of SCAN_JS_DIRS) {
     files.push(...walk(path.join(ROOT, dir), (name) => name.endsWith('.js')));
   }
