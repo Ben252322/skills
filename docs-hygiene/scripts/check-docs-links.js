@@ -22,12 +22,17 @@ const path = require('path');
 // —— 可按目标项目调整的配置 ——
 // 仓库根级、常被引用的活文档（与 docs/** 一样做可达性校验）
 const ROOT_FILES = ['RELEASE_CHECKLIST.md'];
-// 需要扫描 js 注释/字符串引用的目录（不存在会跳过）
-const SCAN_JS_DIRS = ['shared', 'scripts', 'cloudfunctions', 'miniprogram', 'e2e', 'integration', 'test-support'];
+// 业务契约根文档（相对仓库根的路径，如 'AGENTS.md'）；留空则关闭引用方向检查
+const CONTRACT_ROOTS = [];
+// 需要扫描源码注释/字符串引用的目录（不存在会跳过）
+const SCAN_CODE_DIRS = ['shared', 'scripts', 'cloudfunctions', 'miniprogram', 'e2e', 'integration', 'test-support'];
+const CODE_EXTENSIONS = new Set(['.js', '.jsx', '.ts', '.tsx', '.kt', '.java', '.py', '.sh']);
 const IGNORE_DIRS = new Set([
   'node_modules',
   '.git',
   '.local',
+  '.worktrees',
+  '.outbox',
   'generated-images',
   'miniprogram_npm',
   'visual-baseline',
@@ -83,7 +88,18 @@ function main() {
     }
   }
 
-  // 引用形态：docs/xxx.md、docs/<子目录>/xxx.md、ROOT_FILES；允许可选 ../ 前缀与 :行号 锚点
+  // 契约根配置归一化（容忍 ./ 前缀）并校验存在性：路径写错会让方向检查静默失效
+  const contractRoots = new Set(CONTRACT_ROOTS.map((r) => r.replace(/^\.\//, '')));
+  for (const r of contractRoots) {
+    if (!fs.existsSync(path.join(ROOT, r))) {
+      console.error(`[check-docs-links] FAIL: CONTRACT_ROOTS 配置的契约根不存在: ${r}（应为相对仓库根的路径）`);
+      process.exit(1);
+    }
+  }
+
+  // 引用形态：docs/…xxx.md、docs/<子目录>/…xxx.md、ROOT_FILES；允许可选 ../ 前缀与 :行号 锚点
+  // （示例刻意使用非匹配写法：本脚本被拷入采用方 scripts/ 后会扫描自身，
+  //   注释里写真实的示例路径会被误判为死链）
   const rootAlt = ROOT_FILES.map(escapeRegExp).join('|');
   const REF_RE = new RegExp(
     `(?:\\.\\.\\/)*(?:docs\\/[\\w./-]+\\.md|${rootAlt})(?::\\d+(?:-\\d+)?)?`,
@@ -95,11 +111,12 @@ function main() {
     ...walk(ROOT, (name) => name.endsWith('.md')),
     ...walk(path.join(ROOT, 'docs'), (name) => name.endsWith('.md')),
   ])];
-  for (const dir of SCAN_JS_DIRS) {
-    files.push(...walk(path.join(ROOT, dir), (name) => name.endsWith('.js')));
+  for (const dir of SCAN_CODE_DIRS) {
+    files.push(...walk(path.join(ROOT, dir), (name) => CODE_EXTENSIONS.has(path.extname(name))));
   }
 
   const broken = [];
+  const contractViolations = [];
   let checked = 0;
   let ignored = 0;
 
@@ -121,14 +138,25 @@ function main() {
         if (!fs.existsSync(path.join(ROOT, ref))) {
           broken.push(`${rel}:${i + 1} -> ${ref}`);
         }
+        if (contractRoots.has(rel) && ref.startsWith('docs/')) {
+          const target = path.relative(ROOT, path.join(ROOT, ref)).split(path.sep).join('/');
+          if (!contractRoots.has(target)) contractViolations.push(`${rel}:${i + 1} -> ${target}`);
+        }
       }
     });
   }
 
-  if (broken.length > 0) {
-    console.error(`[check-docs-links] FAIL: ${broken.length}/${checked} 处文档引用不可达`);
-    for (const b of broken) console.error(`  ${b}`);
-    console.error('[check-docs-links] 删除/移动文档时必须同步更新引用（含代码注释）。');
+  if (broken.length > 0 || contractViolations.length > 0) {
+    if (broken.length > 0) {
+      console.error(`[check-docs-links] FAIL: ${broken.length}/${checked} 处文档引用不可达`);
+      for (const b of broken) console.error(`  ${b}`);
+      console.error('[check-docs-links] 删除/移动文档时必须同步更新引用（含代码注释）。');
+    }
+    if (contractViolations.length > 0) {
+      console.error(`[check-docs-links] FAIL: ${contractViolations.length} 处契约根引用方向违规`);
+      for (const v of contractViolations) console.error(`  ${v}`);
+      console.error('[check-docs-links] 契约根不得直接引用 docs/ 内的非根文档；细节引用经 docs/README.md 索引中转。');
+    }
     process.exit(1);
   }
 
