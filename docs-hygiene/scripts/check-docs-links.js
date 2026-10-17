@@ -38,6 +38,7 @@ const IGNORE_DIRS = new Set([
   'visual-baseline',
   'visual-actual',
   'visual-diff',
+  'tests',
 ]);
 
 function detectRoot() {
@@ -101,8 +102,9 @@ function main() {
   // （示例刻意使用非匹配写法：本脚本被拷入采用方 scripts/ 后会扫描自身，
   //   注释里写真实的示例路径会被误判为死链）
   const rootAlt = ROOT_FILES.map(escapeRegExp).join('|');
+  const targetAlt = rootAlt ? `docs\\/[\\w./-]+\\.md|${rootAlt}` : 'docs\\/[\\w./-]+\\.md';
   const REF_RE = new RegExp(
-    `(?:\\.\\.\\/)*(?:docs\\/[\\w./-]+\\.md|${rootAlt})(?::\\d+(?:-\\d+)?)?`,
+    `(?:\\.\\.\\/)*(?:${targetAlt})(?::\\d+(?:-\\d+)?)?`,
     'g'
   );
 
