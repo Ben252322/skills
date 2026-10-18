@@ -1,7 +1,7 @@
 # skills
 
 可复用的 agent skills 集合。每个子目录是一个独立 skill，遵循
-[SKILL.md 规范](https://code.claude.com/docs/zh-CN/skills)（YAML frontmatter：name + description）。
+[SKILL.md 规范](https://code.claude.com/docs/zh-CN/skills)（YAML frontmatter：name + description；多 agent 工具通用格式）。
 
 ## Skills 列表
 
@@ -11,15 +11,17 @@
 
 ## 使用方法
 
-**作为 agent skill 加载**（CodeBuddy / Claude Code）：
+**作为 agent skill 加载**（面向兼容 SKILL.md 规范的通用 agent）：
 
 ```bash
 # 用户级（所有项目可用）
-cp -r docs-hygiene ~/.codebuddy/skills/
+cp -r docs-hygiene ~/.agents/skills/
 
 # 或项目级（随仓库共享给协作者）
-cp -r docs-hygiene <项目>/.codebuddy/skills/
+cp -r docs-hygiene <项目>/.agents/skills/
 ```
+
+`.agents/skills/` 为通用约定位置；所用 agent 工具若另有自己的 skill 目录，以其文档为准。
 
 加载后，涉及文档结构、文档去留、文档漂移、设计文档归档时机的任务会自动触发。
 

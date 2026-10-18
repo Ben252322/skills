@@ -14,31 +14,31 @@
  * 用于文档中引用「示例路径 / 规划中但尚未创建的文件」的场景。慎用——
  * 豁免一条引用等于人为制造一个死链，只应放过确有理由的示例引用。
  *
- * 改自 keshiqing-miniapp 仓库（2026-10-17 文档重组时引入）。
+ * 随 docs-hygiene skill 分发；采用时按目标项目调整下方配置区。
  */
 const fs = require('fs');
 const path = require('path');
 
 // —— 可按目标项目调整的配置 ——
-// 仓库根级、常被引用的活文档（与 docs/** 一样做可达性校验）
-const ROOT_FILES = ['RELEASE_CHECKLIST.md'];
+// 仓库根级、常被引用的活文档（与 docs/** 一样做可达性校验；如 'RELEASE_CHECKLIST.md'）
+const ROOT_FILES = [];
 // 业务契约根文档（相对仓库根的路径，如 'AGENTS.md'）；留空则关闭引用方向检查
 const CONTRACT_ROOTS = [];
-// 需要扫描源码注释/字符串引用的目录（不存在会跳过）
-const SCAN_CODE_DIRS = ['shared', 'scripts', 'cloudfunctions', 'miniprogram', 'e2e', 'integration', 'test-support'];
+// 需要扫描源码注释/字符串引用的目录（不存在会跳过；下列为常见默认值，按项目增删——
+// 小程序 / 云开发项目可加 'miniprogram'、'cloudfunctions' 等）
+const SCAN_CODE_DIRS = ['src', 'lib', 'app', 'server', 'packages', 'scripts'];
 const CODE_EXTENSIONS = new Set(['.js', '.jsx', '.ts', '.tsx', '.kt', '.java', '.py', '.sh']);
+// 遍历时跳过的目录（依赖与构建产物；按项目增补）
 const IGNORE_DIRS = new Set([
   'node_modules',
   '.git',
-  '.local',
-  '.worktrees',
-  '.outbox',
-  'generated-images',
-  'miniprogram_npm',
-  'visual-baseline',
-  'visual-actual',
-  'visual-diff',
-  'tests',
+  'dist',
+  'build',
+  'coverage',
+  '.next',
+  '.cache',
+  '.turbo',
+  'out',
 ]);
 
 function detectRoot() {
